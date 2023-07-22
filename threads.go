@@ -3,18 +3,18 @@ package threads
 import (
 	"bytes"
 	"context"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
 const (
-	baseURL = "https://www.threads.net/@"
+	baseURL = "https://www.threads.net"
 	apiURL  = "https://www.threads.net/api/graphql"
 
 	getUserDocID        = "23996318473300828"
@@ -88,14 +88,14 @@ func WithHeader(header http.Header) Option {
 
 // getToken returns the token used to make requests to the API.
 func (c *Client) getToken(ctx context.Context) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"instagram", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/@instagram", nil)
 	if err != nil {
 		return "", err
 	}
 
 	req.Header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.44.639.844 Safari/537.36")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -111,7 +111,7 @@ func (c *Client) getToken(ctx context.Context) (string, error) {
 
 // GetUserID returns the user ID of the given username.
 func (c *Client) GetUserID(ctx context.Context, name string) (int, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+name, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/@"+name, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -124,9 +124,9 @@ func (c *Client) GetUserID(ctx context.Context, name string) (int, error) {
 	req.Header.Add("Sec-Fetch-User", "?1")
 	req.Header.Add("Upgrade-Insecure-Requests", "1")
 
-	req.Header.Del("X-ASBD-ID")
-	req.Header.Del("X-FB-LSD")
-	req.Header.Del("X-IG-App-ID")
+	req.Header.Del("X-Asbd-Id")
+	req.Header.Del("X-Fb-Lsd")
+	req.Header.Del("X-Ig-App-Id")
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -139,11 +139,7 @@ func (c *Client) GetUserID(ctx context.Context, name string) (int, error) {
 		return 0, err
 	}
 
-	var userID int
-	if err := binary.Read(bytes.NewReader(userIDRegex.FindSubmatch(body)[1]), binary.BigEndian, &userID); err != nil {
-		return 0, err
-	}
-	return userID, nil
+	return strconv.Atoi(string(userIDRegex.FindSubmatch(body)[1]))
 }
 
 // GetUser returns the profile of the given user ID.
@@ -216,9 +212,9 @@ func sendRequest(ctx context.Context, c *http.Client, headers http.Header, token
 		return nil, err
 	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode >= 400 {
 		return nil, fmt.Errorf("status code %d", resp.StatusCode)
 	}
-
 	return io.ReadAll(resp.Body)
 }
