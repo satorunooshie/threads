@@ -34,6 +34,11 @@ type Client struct {
 
 type Option func(*Client)
 
+// NewClient returns a new threads API client.
+// If no token is provided, it will fetch it automatically.
+// If a token is provided, it will use it to make requests to the API.
+// If a client is provided, it will be used to make requests to the API.
+// If a header is provided, the original header will be modified to make requests to the API.
 func NewClient(ctx context.Context, opts ...Option) (*Client, error) {
 	c := Client{
 		client: http.DefaultClient,
@@ -68,18 +73,21 @@ func NewClient(ctx context.Context, opts ...Option) (*Client, error) {
 	return &c, nil
 }
 
+// WithToken returns an option that sets the token used to make requests to the API.
 func WithToken(token string) Option {
 	return func(c *Client) {
 		c.token = token
 	}
 }
 
+// WithClient returns an option that sets the client used to make requests to the API.
 func WithClient(client *http.Client) Option {
 	return func(c *Client) {
 		c.client = client
 	}
 }
 
+// WithHeader returns an option that sets the header used to make requests to the API.
 func WithHeader(header http.Header) Option {
 	return func(c *Client) {
 		c.header = header
@@ -138,7 +146,6 @@ func (c *Client) GetUserID(ctx context.Context, name string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-
 	return strconv.Atoi(string(userIDRegex.FindSubmatch(body)[1]))
 }
 
